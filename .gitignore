@@ -3,6 +3,10 @@ inception_v3.egg-info/
 tests/.pytest_cache/
 .idea/
 data
+
+__pycache__/
+*/__pycache__/
+
 loss.jpg
 loss.json
 accuracy.json
