@@ -1,0 +1,11 @@
+inception_v3.egg-info/
+.pytest_cache/
+tests/.pytest_cache/
+.idea/
+data
+loss.jpg
+loss.json
+accuracy.json
+precision.json
+recall.json
+f1.json
