@@ -76,8 +76,8 @@ Or
 
 $$e_t = \frac{|\sum\limits_{i=0}^{M - 1}{\Delta x_{t - 1 -i}}|}{\sum\limits_{i=0}^{M - 1}{|\Delta x_{t - 1 - i}|}}$$
 
-where $x_i$ –– the vector of values of all trainable model parameters at step $i$
-and $\Delta x_i$ –– step values vector of gradient descent at step $i$.
+where $x_i$ – the vector of values of all trainable model parameters at step $i$
+and $\Delta x_i$ – step values vector of gradient descent at step $i$.
 
 A large value of this coefficient in the dimension of $i$ means that in the space of parameters the gradient descent moves in a certain direction in this dimension, smaller values mean that the gradient descent moves in a zigzag pattern.
 
@@ -128,7 +128,7 @@ The rest is calculated in the same way as in the __AdaDelta__ method.
 ## <a name="experiments"></a>Experiments and results
 
 Torch implementation of __Inception V3__ was trained with two optimizers on the cars dataset: __AdaSmooth__ and __Adam__.
-The dataset contains 196 classes –– car brands.
+The dataset contains 196 classes – car brands.
 
 The models were trained for _50_ epochs with a batch size of _128_. The learning rate for both optimizers is _1e-3_.
 The implementation of adam is taken from the torch library, the beta parameters are equal _0.9_ and _0.999_.
