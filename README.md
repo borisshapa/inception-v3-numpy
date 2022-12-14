@@ -70,54 +70,54 @@ In addition, this method, unlike other optimizers, takes into account not only t
 #### Effective Ratio
 This is obtained thanks to the coefficient *efficiency ratio* (ER), which is often used in the field of finance.
 
-$$e_t=\frac{s_t}{n_t} = \frac{\text{Total move for a period}}{\text{Sum of absolute move for each bar}} = \frac{|x_t - x_{t - M}|}{\sum^{M - 1}_{i=0}{|x_{t - i} - x_{t - 1 - i}|}}$$
+$$e_t=\frac{s_t}{n_t} = \frac{\text{Total move for a period}}{\text{Sum of absolute move for each bar}} = \frac{|x_t - x_{t - M}|}{\sum\limits_{i=0}^{M - 1} |x_{t - i} - x_{t - 1 - i}|}$$
 
 Or
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;e_t = \frac{|\sum_{i=0}^{M - 1}{\Delta x_{t - 1 -i}}|}{\sum_{i=0}^{M - 1}{|\Delta x_{t - 1 - i}|}}" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" />
+$$e_t = \frac{|\sum\limits_{i=0}^{M - 1}{\Delta x_{t - 1 -i}}|}{\sum\limits_{i=0}^{M - 1}{|\Delta x_{t - 1 - i}|}}$$
 
-where <img src="https://latex.codecogs.com/svg.latex?\Large&space;x_i" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" /> –– the vector of values of all trainable model parameters at step <img src="https://latex.codecogs.com/svg.latex?\Large&space;i" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" />
-and <img src="https://latex.codecogs.com/svg.latex?\Large&space;\Delta x_i" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" /> –– step values vector of gradient descent at step <img src="https://latex.codecogs.com/svg.latex?\Large&space;i" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" />.
+where $x_i$ –– the vector of values of all trainable model parameters at step $i$
+and $\Delta x_i$ –– step values vector of gradient descent at step $i$.
 
-A large value of this coefficient in the dimension of <img src="https://latex.codecogs.com/svg.latex?\Large&space;i" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}"/> means that in the space of parameters the gradient descent moves in a certain direction in this dimension, smaller values mean that the gradient descent moves in a zigzag pattern.
+A large value of this coefficient in the dimension of $i$ means that in the space of parameters the gradient descent moves in a certain direction in this dimension, smaller values mean that the gradient descent moves in a zigzag pattern.
 
-To simplify calculations, <img src="https://latex.codecogs.com/svg.latex?\Large&space;M" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}"/> is chosen equal to the batch index at each epoch. In this case, there is no need to store the <img src="https://latex.codecogs.com/svg.latex?\Large&space;M" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}"/> values of all parameters, but you can recalculate the value of EP in the accumulated fashion.
+To simplify calculations, $M$ is chosen equal to the batch index at each epoch. In this case, there is no need to store the $M$ values of all parameters, but you can recalculate the value of EP in the accumulated fashion.
 
 #### AdaSmooth
 
 In the algorithm __AdaDelta__ (RMSProp), the delta step is calculated as follows:
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space; \Delta x_t = - \frac{\eta}{\text{RMS}[g]_t} \odot g_t" title=""/>
+$$\Delta x_t = - \frac{\eta}{\text{RMS}[g]_t} \odot g_t$$
 
 where
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;\text{RMS}[g]_t = \sqrt{E[g^2]_t + \epsilon}" title="" />,
+$$\text{RMS}[g]_t = \sqrt{E[g^2]_t + \epsilon}$$
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;E[g^2]_t = \rho E[g^2]_{t - 1} + (1 - \rho) g^2_t" title=""/>
+$$E[g^2]_t = \rho E[g^2]_{t - 1} + (1 - \rho) g^2_t$$
 
-The constant <img src="https://latex.codecogs.com/svg.latex?\Large&space;1 - \rho" title=""/> is also known as the smoothing constant (SC) and can be written as
+The constant $1 - \rho$ is also known as the smoothing constant (SC) and can be written as
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;\text{SC} = \frac{2}{N + 1}" title=""/>
+$$\text{SC} = \frac{2}{N + 1}$$
 
-and the period <img src="https://latex.codecogs.com/svg.latex?\Large&space;N" title=""/> can be thought of as the number of past values to do the moving average calculation.
+and the period $N$ can be thought of as the number of past values to do the moving average calculation.
 
 
-Let's take a small period value and a large period value <img src="https://latex.codecogs.com/svg.latex?\Large&space;N_1 = 3, N_2 = 199" title=""/>. Taking values outside this range is inefficient.
+Let's take a small period value and a large period value $N_1 = 3, N_2 = 199$. Taking values outside this range is inefficient.
 Then, with a small value of the period, a small number of past steps are taken into account and gradient descent quickly moves in a new direction. With a large period value, gradient descent tends to move in the direction of the accumulated gradients and slowly changes direction in the new direction.
 
 Let's denote
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;\text{fast SC} = \frac{2}{N_1 + 1} = 1 - \rho_1 = 0.5" title=""/>,
+$$\text{fast SC} = \frac{2}{N_1 + 1} = 1 - \rho_1 = 0.5$$
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;\text{slow SC} = \frac{2}{N_2 + 1} = 1 - \rho_2 = 0.01" title=""/>
+$$\text{slow SC} = \frac{2}{N_2 + 1} = 1 - \rho_2 = 0.01$$
 
 The value of the period is just determined by the behavior of gradient descent at each step, which is expressed by the coefficient ER.
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;c_t = (\rho_2 - \rho_1) \times e_t + (1 - \rho_2)" title=""/>
+$$c_t = (\rho_2 - \rho_1) \times e_t + (1 - \rho_2)$$
 
-The value of <img src="https://latex.codecogs.com/svg.latex?\Large&space;E[g^2]_t" title=""/>, in contrast to the __AdaDelta__ method, is calculated as follows:
+The value of $E[g^2]_t$, in contrast to the __AdaDelta__ method, is calculated as follows:
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;E[g^2]_t = c^2_t \odot g^2_t + (1 - c^2_t) \odot E[g^2]_{t - 1}" title=""/>
+$$E[g^2]_t = c^2_t \odot g^2_t + (1 - c^2_t) \odot E[g^2]_{t - 1}$$
 
 The rest is calculated in the same way as in the __AdaDelta__ method.
 
