@@ -70,7 +70,7 @@ In addition, this method, unlike other optimizers, takes into account not only t
 #### Effective Ratio
 This is obtained thanks to the coefficient *efficiency ratio* (ER), which is often used in the field of finance.
 
-<img src="https://latex.codecogs.com/svg.latex?\Large&space;e_t=\frac{s_t}{n_t} = \frac{\text{Total move for a period}}{\text{Sum of absolute move for each bar}} = \frac{|x_t - x_{t - M}|}{\sum_{i=0}^{M - 1}{|x_{t - i} - x_{t - 1 - i}|}}" title="\Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}" />
+$$e_t=\frac{s_t}{n_t} = \frac{\text{Total move for a period}}{\text{Sum of absolute move for each bar}} = \frac{|x_t - x_{t - M}|}{\sum_{i=0}^{M - 1}{|x_{t - i} - x_{t - 1 - i}|}}$$
 
 Or
 
