@@ -34,3 +34,11 @@ class InceptionAux(Module):
 
     def get_grad_parameters(self):
         return self.inception_aux.get_grad_parameters()
+
+    def train(self):
+        self.training = True
+        self.inception_aux.train()
+
+    def evaluate(self):
+        self.training = False
+        self.inception_aux.evaluate()

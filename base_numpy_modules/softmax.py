@@ -8,7 +8,6 @@ class Softmax(Module):
         super().__init__()
 
     def update_output(self, input):
-        self.output = np.subtract(input, input.max(axis=1, keepdims=True))
         exp = np.exp(input)
         exp_sum = np.sum(exp, axis=1)[:, np.newaxis]
         self.output = exp / exp_sum

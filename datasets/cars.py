@@ -36,7 +36,7 @@ def load_dataset(image_size: Tuple[int, int] = (640, 480)):
 
         return np.array([a[0][4][0][0] for a in annotations])
 
-    x = load_cars_images(os.path.join(cars_dataset_dir, "cars_train.tar"))
+    x = load_cars_images(os.path.join(cars_dataset_dir, "cars_train.tgz"))
     y = load_cars_labels(os.path.join(cars_dataset_dir, "cars_train_annos.mat"))
     y = y - 1
 

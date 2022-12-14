@@ -86,5 +86,6 @@ def avg_pool_backward(
     ]
     return grad_input
 
+
 def broadcast_channel_dim(a: npt.NDArray) -> npt.NDArray:
     return a[np.newaxis, :, np.newaxis, np.newaxis]

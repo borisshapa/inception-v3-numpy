@@ -8,8 +8,4 @@ __pycache__/
 */__pycache__/
 
 loss.jpg
-loss.json
-accuracy.json
-precision.json
-recall.json
-f1.json
+*.json

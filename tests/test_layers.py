@@ -11,19 +11,25 @@ from base_numpy_modules.batchnorm2d import BatchNorm2d
 from base_numpy_modules.batchnorm2dbase import BatchNorm2dBase
 from base_numpy_modules.conv2d import Conv2d
 from base_numpy_modules.flatten import Flatten
+from base_numpy_modules.linear import Linear
 from base_numpy_modules.maxpool2d import MaxPool2d
+from base_numpy_modules.softmax import Softmax
+from criterion.cross_entropy import CrossEntropy
+from numpy_modules.conv2d_bn_relu import Conv2dBNRelu
 from numpy_modules.inception_a import InceptionA
 from numpy_modules.inception_aux import InceptionAux
 from numpy_modules.inception_b import InceptionB
 from numpy_modules.inception_c import InceptionC
 from numpy_modules.inception_d import InceptionD
 from numpy_modules.inception_e import InceptionE
+from numpy_modules.inception_v3 import InceptionV3
 from torch_modules.inception_a import InceptionA as TorchInceptionA
 from torch_modules.inception_b import InceptionB as TorchInceptionB
 from torch_modules.inception_c import InceptionC as TorchInceptionC
 from torch_modules.inception_d import InceptionD as TorchInceptionD
 from torch_modules.inception_e import InceptionE as TorchInceptionE
 from torch_modules.inception_aux import InceptionAux as TorchInceptionAux
+from torch_modules.inception_v3 import InceptionV3 as TorchInceptionV3
 
 
 class Rule:
@@ -77,6 +83,118 @@ class TestLayers(unittest.TestCase):
             custom_layer = getattr(custom_model, rule.numpy_module)
             torch_layer = getattr(torch_model, rule.numpy_module)
             self.prepare_conv_bn(custom_layer, torch_layer)
+
+    def prepare_inception_a(self, custom_layer, torch_layer):
+        for rule in [
+            Rule("branch1x1", False),
+            Rule("branch5x5", True, range(2)),
+            Rule("branch3x3", True, range(3)),
+            Rule("branch_pool", True, range(1, 2), add_id=False),
+        ]:
+            self.prepare_basic_conv(custom_layer, torch_layer, rule)
+
+    def prepare_inception_b(self, custom_layer, torch_layer):
+        for rule in [Rule("branch3x3", False), Rule("_branch3x3", True, range(3))]:
+            self.prepare_basic_conv(custom_layer, torch_layer, rule)
+
+    def prepare_inception_c(self, custom_layer, torch_layer):
+        for rule in [
+            Rule("branch1x1", False),
+            Rule("branch7x7", True, range(3)),
+            Rule("_branch7x7", True, range(5)),
+            Rule("branch_pool", True, range(1, 2), add_id=False),
+        ]:
+            self.prepare_basic_conv(custom_layer, torch_layer, rule)
+
+    def prepare_inception_d(self, custom_layer, torch_layer):
+        for rule in [
+            Rule("branch3x3", True, range(2)),
+            Rule("branch7x7x3", True, range(4)),
+        ]:
+            self.prepare_basic_conv(custom_layer, torch_layer, rule)
+
+    def prepare_inception_e(self, custom_layer, torch_layer):
+        for rule in [
+            Rule("branch1x1", False),
+            Rule("branch3x3_1", False),
+            Rule("branch3x3_2a", False),
+            Rule("branch3x3_2b", False),
+            Rule("_branch3x3_1", False),
+            Rule("_branch3x3_2", False),
+            Rule("_branch3x3_3a", False),
+            Rule("_branch3x3_3b", False),
+            Rule("branch_pool", False),
+        ]:
+            self.prepare_basic_conv(custom_layer, torch_layer, rule)
+
+    def prepare_inception_v3(self, custom_layer, torch_layer):
+        for i, module in enumerate(custom_layer.before_aux):
+            torch_module = torch_layer.before_aux[i]
+            if isinstance(module, Conv2dBNRelu):
+                self.prepare_conv_bn(module, torch_module)
+            elif isinstance(module, InceptionA):
+                self.prepare_inception_a(module, torch_module)
+            elif isinstance(module, InceptionB):
+                self.prepare_inception_b(module, torch_module)
+            elif isinstance(module, InceptionC):
+                self.prepare_inception_c(module, torch_module)
+
+        for i, module in enumerate(custom_layer.after_aux):
+            torch_module = torch_layer.after_aux[i]
+            if isinstance(module, InceptionD):
+                self.prepare_inception_d(module, torch_module)
+            elif isinstance(module, InceptionE):
+                self.prepare_inception_e(module, torch_module)
+            elif isinstance(module, Linear):
+                self.set_weight_and_bias(module, torch_module)
+
+    def test_Linear(self):
+        np.random.seed(42)
+        torch.manual_seed(42)
+
+        batch_size, n_in, n_out = 2, 3, 4
+        for _ in range(100):
+            torch_layer = torch.nn.Linear(n_in, n_out)
+            custom_layer = Linear(n_in, n_out)
+            custom_layer.w = torch_layer.weight.data.numpy()
+            custom_layer.b = torch_layer.bias.data.numpy()
+
+            layer_input = np.random.uniform(-10, 10, (batch_size, n_in)).astype(
+                np.float32
+            )
+            next_layer_grad = np.random.uniform(-10, 10, (batch_size, n_out)).astype(
+                np.float32
+            )
+
+            custom_layer_output = custom_layer.update_output(layer_input)
+            layer_input_var = Variable(
+                torch.from_numpy(layer_input), requires_grad=True
+            )
+            torch_layer_output_var = torch_layer(layer_input_var)
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_output_var.data.numpy(), custom_layer_output, atol=1e-6
+                )
+            )
+
+            custom_layer_grad = custom_layer.update_grad_input(
+                layer_input, next_layer_grad
+            )
+            torch_layer_output_var.backward(torch.from_numpy(next_layer_grad))
+            torch_layer_grad_var = layer_input_var.grad
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_grad_var.data.numpy(), custom_layer_grad, atol=1e-6
+                )
+            )
+
+            custom_layer.acc_grad_parameters(layer_input, next_layer_grad)
+            weight_grad = custom_layer.grad_w
+            bias_grad = custom_layer.grad_b
+            torch_weight_grad = torch_layer.weight.grad.data.numpy()
+            torch_bias_grad = torch_layer.bias.grad.data.numpy()
+            self.assertTrue(np.allclose(torch_weight_grad, weight_grad, atol=1e-6))
+            self.assertTrue(np.allclose(torch_bias_grad, bias_grad, atol=1e-6))
 
     def test_BatchNorm2dBase(self):
         np.random.seed(21)
@@ -181,7 +299,7 @@ class TestLayers(unittest.TestCase):
                 )
             )
 
-            weight_grad, bias_grad = custom_layer.get_grad_parameters()[1]
+            weight_grad, bias_grad = custom_layer.get_grad_parameters()
             torch_weight_grad = torch_layer.weight.grad.data.numpy()
             torch_bias_grad = torch_layer.bias.grad.data.numpy()
 
@@ -556,13 +674,7 @@ class TestLayers(unittest.TestCase):
             torch_layer = TorchInceptionA(n_in, n_out)
             custom_layer = InceptionA(n_in, n_out)
 
-            for rule in [
-                Rule("branch1x1", False),
-                Rule("branch5x5", True, range(2)),
-                Rule("branch3x3", True, range(3)),
-                Rule("branch_pool", True, range(1, 2), add_id=False),
-            ]:
-                self.prepare_basic_conv(custom_layer, torch_layer, rule)
+            self.prepare_inception_a(custom_layer, torch_layer)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
             next_layer_grad = np.random.uniform(-1, 1, (bs, 224 + n_out, h, w)).astype(
@@ -600,8 +712,7 @@ class TestLayers(unittest.TestCase):
             torch_layer = TorchInceptionB(n_in)
             custom_layer = InceptionB(n_in)
 
-            for rule in [Rule("branch3x3", False), Rule("_branch3x3", True, range(3))]:
-                self.prepare_basic_conv(custom_layer, torch_layer, rule)
+            self.prepare_inception_b(custom_layer, torch_layer)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
             next_layer_grad = np.random.uniform(
@@ -640,13 +751,7 @@ class TestLayers(unittest.TestCase):
             torch_layer = TorchInceptionC(n_in, channels_7x7)
             custom_layer = InceptionC(n_in, channels_7x7)
 
-            for rule in [
-                Rule("branch1x1", False),
-                Rule("branch7x7", True, range(3)),
-                Rule("_branch7x7", True, range(5)),
-                Rule("branch_pool", True, range(1, 2), add_id=False),
-            ]:
-                self.prepare_basic_conv(custom_layer, torch_layer, rule)
+            self.prepare_inception_c(custom_layer, torch_layer)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
             next_layer_grad = np.random.uniform(-1, 1, (bs, 768, h, w)).astype(
@@ -684,11 +789,7 @@ class TestLayers(unittest.TestCase):
             torch_layer = TorchInceptionD(n_in)
             custom_layer = InceptionD(n_in)
 
-            for rule in [
-                Rule("branch3x3", True, range(2)),
-                Rule("branch7x7x3", True, range(4)),
-            ]:
-                self.prepare_basic_conv(custom_layer, torch_layer, rule)
+            self.prepare_inception_d(custom_layer, torch_layer)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
             next_layer_grad = np.random.uniform(
@@ -726,18 +827,7 @@ class TestLayers(unittest.TestCase):
             torch_layer = TorchInceptionE(n_in)
             custom_layer = InceptionE(n_in)
 
-            for rule in [
-                Rule("branch1x1", False),
-                Rule("branch3x3_1", False),
-                Rule("branch3x3_2a", False),
-                Rule("branch3x3_2b", False),
-                Rule("_branch3x3_1", False),
-                Rule("_branch3x3_2", False),
-                Rule("_branch3x3_3a", False),
-                Rule("_branch3x3_3b", False),
-                Rule("branch_pool", False),
-            ]:
-                self.prepare_basic_conv(custom_layer, torch_layer, rule)
+            self.prepare_inception_e(custom_layer, torch_layer)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
             next_layer_grad = np.random.uniform(-1, 1, (bs, 2048, h, w)).astype(
@@ -781,7 +871,9 @@ class TestLayers(unittest.TestCase):
             self.set_weight_and_bias(custom_layer.inception_aux[5], torch_layer.fc)
 
             layer_input = np.random.uniform(-1, 1, (bs, n_in, h, w)).astype(np.float32)
-            next_layer_grad = np.random.uniform(-1, 1, (bs, num_classes)).astype(np.float32)
+            next_layer_grad = np.random.uniform(-1, 1, (bs, num_classes)).astype(
+                np.float32
+            )
 
             custom_layer_output = custom_layer.update_output(layer_input)
             layer_input_var = Variable(
@@ -800,5 +892,113 @@ class TestLayers(unittest.TestCase):
             self.assertTrue(
                 np.allclose(
                     torch_layer_grad_var.data.numpy(), custom_layer_grad, atol=1e-4
+                )
+            )
+
+    def test_SoftMax(self):
+        np.random.seed(42)
+        torch.manual_seed(42)
+
+        batch_size, n_in = 2, 4
+        for _ in range(100):
+            torch_layer = torch.nn.Softmax(dim=1)
+            custom_layer = Softmax()
+
+            layer_input = np.random.uniform(-10, 10, (batch_size, n_in)).astype(
+                np.float32
+            )
+            next_layer_grad = np.random.random((batch_size, n_in)).astype(np.float32)
+            next_layer_grad /= next_layer_grad.sum(axis=-1, keepdims=True)
+            next_layer_grad = next_layer_grad.clip(1e-5, 1.0)
+            next_layer_grad = 1.0 / next_layer_grad
+
+            custom_layer_output = custom_layer.update_output(layer_input)
+            layer_input_var = Variable(
+                torch.from_numpy(layer_input), requires_grad=True
+            )
+            torch_layer_output_var = torch_layer(layer_input_var)
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_output_var.data.numpy(), custom_layer_output, atol=1e-5
+                )
+            )
+
+            custom_layer_grad = custom_layer.update_grad_input(
+                layer_input, next_layer_grad
+            )
+            torch_layer_output_var.backward(torch.from_numpy(next_layer_grad))
+            torch_layer_grad_var = layer_input_var.grad
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_grad_var.data.numpy(), custom_layer_grad, atol=1e-5
+                )
+            )
+
+    def test_CrossEntropy(self):
+        np.random.seed(42)
+        torch.manual_seed(42)
+
+        batch_size, n_in = 16, 32
+        for _ in range(100):
+            torch_layer = torch.nn.CrossEntropyLoss()
+            custom_layer = CrossEntropy()
+            layer_input = np.random.uniform(-10, 10, (batch_size, n_in)).astype(
+                np.float32
+            )
+            target = np.zeros_like(layer_input)
+            for i in range(batch_size):
+                rand_ind = np.random.randint(n_in)
+                target[i][rand_ind] = 1
+
+            custom_layer_output = custom_layer.update_output(layer_input, target)
+            layer_input_var = Variable(
+                torch.from_numpy(layer_input), requires_grad=True
+            )
+            target_torch = torch.from_numpy(target)
+
+            torch_layer_output_var = torch_layer(layer_input_var, target_torch)
+
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_output_var.data.numpy(), custom_layer_output, atol=1e-5
+                )
+            )
+
+            custom_layer_grad = custom_layer.update_grad_input(layer_input, target)
+            torch_layer_output_var.backward()
+            torch_layer_grad_var = layer_input_var.grad
+
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_grad_var.data.numpy(), custom_layer_grad, atol=1e-5
+                )
+            )
+
+    def test_InceptionV3(self):
+        np.random.seed(42)
+        torch.manual_seed(42)
+
+        batch_size, n_in, h, w = 8, 3, 75, 75
+        num_classes = 196
+        for _ in range(5):
+            torch_layer = TorchInceptionV3(num_classes, dropout=0)
+            custom_layer = InceptionV3(num_classes, dropout=0)
+            self.prepare_inception_v3(custom_layer, torch_layer)
+
+            layer_input = np.random.uniform(-10, 10, (batch_size, n_in, h, w)).astype(
+                np.float32
+            )
+            next_layer_grad = np.random.uniform(
+                -10, 10, (batch_size, num_classes)
+            ).astype(np.float32)
+            custom_layer_output, _ = custom_layer.update_output(layer_input)
+            layer_input_var = Variable(
+                torch.from_numpy(layer_input), requires_grad=True
+            )
+            torch_layer_output_var, _ = torch_layer(layer_input_var)
+
+            self.assertTrue(
+                np.allclose(
+                    torch_layer_output_var.data.numpy(), custom_layer_output, atol=1e-3
                 )
             )

@@ -30,8 +30,8 @@ class InceptionA(Module):
         branch3x3 = self.branch3x3.update_output(input)
         branch_pool = self.branch_pool.update_output(input)
 
-        outputs = np.concatenate([branch1x1, branch5x5, branch3x3, branch_pool], axis=1)
-        return outputs
+        self.output = np.concatenate([branch1x1, branch5x5, branch3x3, branch_pool], axis=1)
+        return self.output
 
     def backward(self, input, grad_output):
         grad_branch1x1, grad_branch5x5, grad_branch3x3, grad_branch_pool = np.split(
@@ -68,3 +68,17 @@ class InceptionA(Module):
             + self.branch5x5.get_grad_parameters()
             + self.branch_pool.get_grad_parameters()
         )
+
+    def train(self):
+        self.training = True
+        self.branch1x1.train()
+        self.branch3x3.train()
+        self.branch5x5.train()
+        self.branch_pool.train()
+
+    def evaluate(self):
+        self.training = False
+        self.branch1x1.evaluate()
+        self.branch3x3.evaluate()
+        self.branch5x5.evaluate()
+        self.branch_pool.evaluate()

@@ -43,7 +43,8 @@ class InceptionE(Module):
         branch_pool = self.avg_pool.update_output(input)
         branch_pool = self.branch_pool.update_output(branch_pool)
 
-        return np.concatenate([branch1x1, branch3x3, _branch3x3, branch_pool], 1)
+        self.output = np.concatenate([branch1x1, branch3x3, _branch3x3, branch_pool], 1)
+        return self.output
 
     def backward(self, input, grad_output):
         grad_branch1x1, grad_branch3x3, grad__branch3x3, grad_branch_pool = np.split(
@@ -77,7 +78,8 @@ class InceptionE(Module):
             self.avg_pool.output, grad_branch_pool
         )
         grad_branch_pool = self.avg_pool.backward(input, grad_branch_pool)
-        return grad_branch_pool + grad__branch3x3 + grad_branch3x3 + grad_branch1x1
+        self.grad_input = grad_branch_pool + grad__branch3x3 + grad_branch3x3 + grad_branch1x1
+        return self.grad_input
 
     def zero_grad_parameters(self):
         self.branch1x1.zero_grad_parameters()
@@ -118,3 +120,29 @@ class InceptionE(Module):
             + self.avg_pool.get_grad_parameters()
             + self.branch_pool.get_grad_parameters()
         )
+
+    def train(self):
+        self.training = True
+        self.branch1x1.train()
+        self.branch3x3_1.train()
+        self.branch3x3_2a.train()
+        self.branch3x3_2b.train()
+        self._branch3x3_1.train()
+        self._branch3x3_2.train()
+        self._branch3x3_3a.train()
+        self._branch3x3_3b.train()
+        self.avg_pool.train()
+        self.branch_pool.train()
+
+    def evaluate(self):
+        self.training = False
+        self.branch1x1.evaluate()
+        self.branch3x3_1.evaluate()
+        self.branch3x3_2a.evaluate()
+        self.branch3x3_2b.evaluate()
+        self._branch3x3_1.evaluate()
+        self._branch3x3_2.evaluate()
+        self._branch3x3_3a.evaluate()
+        self._branch3x3_3b.evaluate()
+        self.avg_pool.evaluate()
+        self.branch_pool.evaluate()

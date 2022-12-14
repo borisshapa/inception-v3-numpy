@@ -24,6 +24,7 @@ def ada_smooth_optimizer(variables, gradients, config, state):
         er = np.divide(
             abs(sum_delta), sum_abs_delta, out=np.zeros_like(sum_delta), where=sum_abs_delta != 0
         )
+
         smoothing = (config["slow_decay"] - config["fast_decay"]) * er + (
             1 - config["slow_decay"]
         )

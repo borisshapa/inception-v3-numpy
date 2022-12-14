@@ -24,6 +24,9 @@ class Conv2dBNRelu(Module):
         self.grad_input = self.conv_bn_relu.backward(input, grad_output)
         return self.grad_input
 
+    def zero_grad_parameters(self):
+        self.conv_bn_relu.zero_grad_parameters()
+
     def get_parameters(self):
         return self.conv_bn_relu.get_parameters()
 
@@ -31,7 +34,9 @@ class Conv2dBNRelu(Module):
         return self.conv_bn_relu.get_grad_parameters()
 
     def train(self):
+        self.training = True
         self.conv_bn_relu.train()
 
     def evaluate(self):
+        self.training = False
         self.conv_bn_relu.evaluate()

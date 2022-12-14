@@ -46,3 +46,13 @@ class InceptionB(Module):
         return (
             self.branch3x3.get_grad_parameters() + self._branch3x3.get_grad_parameters()
         )
+
+    def train(self):
+        self.training = True
+        self.branch3x3.train()
+        self._branch3x3.train()
+
+    def evaluate(self):
+        self.training = False
+        self.branch3x3.evaluate()
+        self._branch3x3.evaluate()

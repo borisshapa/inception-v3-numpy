@@ -15,12 +15,12 @@ from numpy_modules.inception_aux import InceptionAux
 
 
 class InceptionV3(Module):
-    def __init__(self, num_classes: int, dropout: float = 0.5, use_aux: bool = False):
+    def __init__(self, num_classes: int, dropout: float = 0.5, use_aux: bool = False, in_channels: int = 3):
         super().__init__()
         self.use_aux = use_aux
 
         self.before_aux = Sequential()
-        self.before_aux.add(Conv2dBNRelu(3, 32, kernel_size=3, stride=2))
+        self.before_aux.add(Conv2dBNRelu(in_channels, 32, kernel_size=3, stride=2))
         self.before_aux.add(Conv2dBNRelu(32, 32, kernel_size=3))
         self.before_aux.add(Conv2dBNRelu(32, 64, kernel_size=3, stride=1, padding=1))
         self.before_aux.add(MaxPool2d(kernel_size=3, stride=2))
@@ -47,14 +47,26 @@ class InceptionV3(Module):
         self.after_aux.add(Flatten(start_dim=1))
         self.after_aux.add(Linear(2048, num_classes))
 
-    def forward(self, x):
+    def update_output(self, x):
         x = self.before_aux.update_output(x)
 
         aux = (
             self.aux_logits.update_output(x) if self.use_aux and self.training else None
         )
+
         x = self.after_aux.update_output(x)
-        return x, aux
+        self.output = (x, aux)
+        return self.output
+
+    def backward(self, input, grad_output):
+        if self.use_aux:
+            grad_output, grad_aux = grad_output
+            grad_aux = self.aux_logits.backward(self.before_aux.output, grad_aux)
+        grad_output = self.after_aux.backward(self.before_aux.output, grad_output)
+        if self.use_aux:
+            grad_output += grad_aux
+        self.grad_input = self.before_aux.backward(input, grad_output)
+        return self.grad_input
 
     def zero_grad_parameters(self):
         self.before_aux.zero_grad_parameters()
@@ -74,3 +86,15 @@ class InceptionV3(Module):
             + self.aux_logits.get_grad_parameters()
             + self.after_aux.get_grad_parameters()
         )
+
+    def train(self):
+        self.training = True
+        self.before_aux.train()
+        self.aux_logits.train()
+        self.aux_logits.train()
+
+    def evaluate(self):
+        self.training = False
+        self.before_aux.evaluate()
+        self.aux_logits.evaluate()
+        self.after_aux.evaluate()

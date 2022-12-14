@@ -28,3 +28,11 @@ class BatchNorm2d(Module):
 
     def get_grad_parameters(self):
         return self.bn.get_grad_parameters()
+
+    def train(self):
+        self.training = True
+        self.bn.train()
+
+    def evaluate(self):
+        self.training = False
+        self.bn.evaluate()

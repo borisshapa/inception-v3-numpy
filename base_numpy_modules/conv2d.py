@@ -137,7 +137,6 @@ class Conv2d(Module):
                             slice * grad_output[batch_ind, c, i, j]
                         )
                         self.grad_b[c] += grad_output[batch_ind, c, i, j]
-        return self.grad_input
 
     def zero_grad_parameters(self):
         self.grad_w.fill(0)
