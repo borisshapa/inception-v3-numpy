@@ -55,9 +55,20 @@ The resulting model contains *24 388 980* trainable parameters.
 * Torch: [torch_modules](./torch_modules) (based on the [implementation from the torch vision library](https://github.com/pytorch/vision/blob/main/torchvision/models/inception.py))
 
 The numpy model was trained on a [mnist](http://yann.lecun.com/exdb/mnist/) dataset of 1750 steps with a batch size of 8.
+The training took _42 hours_.
 From the plot, you can see that the model is training, the loss is falling.
 
 ![](resources/images/loss_mnist.png)
+
+#### Tests
+
+There are tests that check whether the outputs and gradients of the modules written in numpy and modules from the torch library match: [test/test_layers.py](./tests/test_layers.py)
+
+To run tests, use the command: 
+
+```shell
+pytest tests/test_layers.py
+```
 
 ## <a name="adasmooth"></a>AdaSmooth
 
@@ -132,6 +143,8 @@ The dataset contains 196 classes – car brands.
 
 The models were trained for _50_ epochs with a batch size of _128_. The learning rate for both optimizers is _1e-3_.
 The implementation of adam is taken from the torch library, the beta parameters are equal _0.9_ and _0.999_.
+
+Training one epoch with the __Adam__ optimizer took 13:51, __AdaSmooth__ 14:31.
 
 The values of the loss function are shown in the plot below.
 
