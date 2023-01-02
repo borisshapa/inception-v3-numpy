@@ -156,4 +156,4 @@ As you can see, the method __AdaSmooth__ converges more slowly than the __Adam__
 
 Such results are obtained due to the features of the optimizer __AdaSmooth__. It adjusts the parameters depending on how gradient descent behaves. That is, he needs time to correctly adjust the coefficient ER. Therefore, the convergence of this method is slower.
 
-Since the method takes into account not only the absolute values of the gradients, but also the overall shift in a certain direction. This more accurate information allows you to find more optimal parameters for the model, so the quality when using such an optimizer
+Since the method takes into account not only the absolute values of the gradients, but also the overall shift in a certain direction. This more accurate information allows you to find more optimal parameters for the model, so the quality when using such an optimizer is higher.
